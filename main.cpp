@@ -3,7 +3,7 @@
 #include <fstream>
 #include <cstring>
 #include <algorithm>
-#include <map>
+#include <array>
 
 
 const int HEIGHT = 512;
@@ -12,7 +12,7 @@ const int WIDTH = 512;
 
 void perform_operation(unsigned char* input_image, unsigned char* output_image, int ksize);
 
-int main(int argc, char** argv)
+int main()
 {
     unsigned char input_image[HEIGHT*WIDTH*3];
     unsigned char output_image[HEIGHT*WIDTH*3];
@@ -52,6 +52,12 @@ void perform_operation(unsigned char* input_image, unsigned char* output_image, 
         Pixels outside the image should be considered to have a value of 0.
         Each color channel in the RGB image should be processed independently. 
     */
+    
+    // Pixel values. Index is color value, value at index is the count
+    const int MAX_PIXEL_VALUE = 255 + 1;
+    std::array<int, MAX_PIXEL_VALUE> count_red;
+    std::array<int, MAX_PIXEL_VALUE> count_green;
+    std::array<int, MAX_PIXEL_VALUE> count_blue;
 
     // Loop over pixels in image
     for (int p = 0; p < HEIGHT * WIDTH; p++)
@@ -60,9 +66,9 @@ void perform_operation(unsigned char* input_image, unsigned char* output_image, 
         const int p_x = p % WIDTH;
         const int p_y = p / HEIGHT; // floor(i / HEIGHT) (integer division)
 
-        std::map<unsigned char, int> count_red{};
-        std::map<unsigned char, int> count_green{};
-        std::map<unsigned char, int> count_blue{};
+        count_red.fill(0);
+        count_green.fill(0);
+        count_blue.fill(0);
 
         // Loop over region R around pixel p
         for (int i = -ksize; i <= ksize; i++)
@@ -79,26 +85,50 @@ void perform_operation(unsigned char* input_image, unsigned char* output_image, 
                     count_green[0]++;
                     count_blue[0]++;
                 }
+                // Get pixel values and increment count for found values
                 else
                 {
-                    // Get pixel values and increment count for found values
                     const unsigned char red = input_image[get_index(x, y, 0)];
                     const unsigned char green = input_image[get_index(x, y, 1)];
                     const unsigned char blue = input_image[get_index(x, y, 2)];
                     count_red[red]++;
                     count_green[green]++;
                     count_blue[blue]++;
+                    if (red >= MAX_PIXEL_VALUE or green >= MAX_PIXEL_VALUE or blue >= MAX_PIXEL_VALUE)
+                        std::cout << "\n!!!CRASHERINO PROGRAM NOT WORKING DESTROY COMPUTER NOW!!!\n\n";
                 }
             }
         }
 
         // Set current pixel to most common value in R, separate for each color channel
-        const auto compare_value = [](const std::pair<unsigned char, int>& a, const std::pair<unsigned char, int>& b) { return a.second < b.second; };
-        const auto max_count_red = std::max_element(count_red.begin(), count_red.end(), compare_value);
-        const auto max_count_green = std::max_element(count_green.begin(), count_green.end(), compare_value);
-        const auto max_count_blue = std::max_element(count_blue.begin(), count_blue.end(), compare_value);
-        output_image[get_index(p_x, p_y, 0)] = max_count_red->first;
-        output_image[get_index(p_x, p_y, 1)] = max_count_green->first;
-        output_image[get_index(p_x, p_y, 2)] = max_count_blue->first;
+        int max_red_count{}, max_green_count{}, max_blue_count{};
+        unsigned char max_red_value{}, max_green_value{}, max_blue_value{}; // Array indices
+
+        for (int i = 0; i < MAX_PIXEL_VALUE; i++)
+        {
+            int curr_red_count = count_red[i];
+            if (curr_red_count > max_red_count)
+            {
+                max_red_count = curr_red_count;
+                max_red_value = i;
+            }
+            
+            int curr_green_count = count_green[i];
+            if (curr_green_count > max_green_count)
+            {
+                max_green_count = curr_green_count;
+                max_green_value = i;
+            }
+            
+            int curr_blue_count = count_blue[i];
+            if (curr_blue_count > max_blue_count)
+            {
+                max_blue_count = curr_blue_count;
+                max_blue_value = i;
+            }
+        }
+        output_image[get_index(p_x, p_y, 0)] = max_red_value;
+        output_image[get_index(p_x, p_y, 1)] = max_green_value;
+        output_image[get_index(p_x, p_y, 2)] = max_blue_value;
     }
 }
